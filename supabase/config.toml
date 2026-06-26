@@ -1,0 +1,50 @@
+# Supabase Configuration
+
+[project]
+# Replace with your project ID from Supabase dashboard
+# Get this from: https://app.supabase.com/projects
+# It's in the URL: https://app.supabase.com/projects/YOUR_PROJECT_ID
+
+[api]
+# Enable all functions for local development
+enabled = true
+
+[functions."attendance-process"]
+enabled = true
+
+[functions."qr-validate"]
+enabled = true
+
+[functions."report-generate"]
+enabled = true
+
+[functions."payroll-calculate"]
+enabled = true
+
+[functions."leave-approval"]
+enabled = true
+
+[functions."notify-user"]
+enabled = true
+
+[functions."calculate-penalties"]
+enabled = true
+
+[functions."sync-attendance"]
+enabled = true
+
+[functions."generate-analytics"]
+enabled = true
+
+[functions."export-data"]
+enabled = true
+
+[functions."backup-database"]
+enabled = true
+
+[functions."email-send"]
+enabled = true
+
+[db]
+# Connection for local development
+port = 54322

@@ -1,0 +1,28 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Clock Circle -->
+  <circle cx="60" cy="60" r="45" fill="none" stroke="#0055FF" stroke-width="5"/>
+  
+  <!-- Clock Center Dot -->
+  <circle cx="60" cy="60" r="3" fill="#0055FF"/>
+  
+  <!-- Hour Marks -->
+  <line x1="60" y1="18" x2="60" y2="24" stroke="#0055FF" stroke-width="2" stroke-linecap="round"/>
+  <line x1="60" y1="96" x2="60" y2="102" stroke="#0055FF" stroke-width="2" stroke-linecap="round"/>
+  <line x1="18" y1="60" x2="24" y2="60" stroke="#0055FF" stroke-width="2" stroke-linecap="round"/>
+  <line x1="96" y1="60" x2="102" y2="60" stroke="#0055FF" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Hour Hand (shorter) -->
+  <line x1="60" y1="60" x2="52" y2="45" stroke="#001F66" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Minute Hand (longer) -->
+  <line x1="60" y1="60" x2="78" y2="55" stroke="#0055FF" stroke-width="3" stroke-linecap="round"/>
+  
+  <!-- Checkmark inside clock -->
+  <g transform="translate(70, 65)">
+    <path d="M 0 5 L 6 11 L 15 0" fill="none" stroke="#00AA00" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  
+  <!-- "SamMia" Text (simplified for small icon) -->
+  <text x="120" y="80" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#001F66">Sam</text>
+  <text x="120" y="80" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#0055FF">Mia</text>
+</svg>
