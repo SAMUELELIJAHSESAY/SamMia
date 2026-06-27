@@ -44,14 +44,13 @@ const navItems: NavItem[] = [
   { label: 'Branches', path: '/branches', icon: <Building2 className="w-5 h-5" />, roles: ['company_admin'] },
   { label: 'Settings', path: '/settings', icon: <Settings className="w-5 h-5" />, roles: ['company_admin'] },
   // Super Admin Menu
-  { label: 'Platform', path: '/super-admin', icon: <Shield className="w-5 h-5" />, roles: ['super_admin'] },
   { label: 'Companies', path: '/super-admin/companies', icon: <Building2 className="w-5 h-5" />, roles: ['super_admin'] },
   { label: 'Users', path: '/super-admin/users', icon: <Users className="w-5 h-5" />, roles: ['super_admin'] },
   { label: 'Billing', path: '/super-admin/billing', icon: <DollarSign className="w-5 h-5" />, roles: ['super_admin'] },
   { label: 'Analytics', path: '/super-admin/analytics', icon: <FileText className="w-5 h-5" />, roles: ['super_admin'] },
   { label: 'Support', path: '/super-admin/support', icon: <Mail className="w-5 h-5" />, roles: ['super_admin'] },
   { label: 'Email Templates', path: '/super-admin/email-templates', icon: <Mail className="w-5 h-5" />, roles: ['super_admin'] },
-  { label: 'Settings', path: '/super-admin/settings', icon: <Settings className="w-5 h-5" />, roles: ['super_admin'] },
+  { label: 'Platform Settings', path: '/super-admin/settings', icon: <Settings className="w-5 h-5" />, roles: ['super_admin'] },
 ];
 
 export function Sidebar() {

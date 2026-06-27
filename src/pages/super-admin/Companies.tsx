@@ -9,12 +9,21 @@ import { Input } from '../../components/ui/Input';
 import { Modal } from '../../components/ui/Modal';
 import { Table, TableHead, TableBody, TableRow, TableHeaderCell, TableCell } from '../../components/ui/Table';
 import { formatDate, formatCurrency } from '../../lib/utils';
-import { Building2, Plus, Trash2, Edit } from 'lucide-react';
+import { Building2, Plus, Trash2, Edit, Shield, Mail, Lock } from 'lucide-react';
+
+interface CreateAdminForm {
+  fullName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
 
 export function CompaniesPage() {
   const showToast = useUIStore((s) => s.showToast);
   const queryClient = useQueryClient();
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateCompanyModal, setShowCreateCompanyModal] = useState(false);
+  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'suspended'>('all');
   const [newCompany, setNewCompany] = useState({
@@ -23,6 +32,12 @@ export function CompaniesPage() {
     phone: '',
     industry: '',
     plan: 'free',
+  });
+  const [adminForm, setAdminForm] = useState<CreateAdminForm>({
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
   });
 
   // Fetch all companies
@@ -47,7 +62,6 @@ export function CompaniesPage() {
 
   const createCompany = useMutation({
     mutationFn: async (payload: any) => {
-      // Generate a unique slug
       const slug = payload.name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
 
       const { data, error } = await supabase
@@ -60,7 +74,7 @@ export function CompaniesPage() {
           industry: payload.industry,
           plan_id: payload.plan,
           status: 'trial',
-          trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days
+          trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
           max_employees: payload.plan === 'free' ? 5 : payload.plan === 'pro' ? 50 : 500,
         })
         .select()
@@ -68,7 +82,6 @@ export function CompaniesPage() {
 
       if (error) throw error;
 
-      // Create company settings
       await supabase.from('company_settings').insert({
         company_id: data.id,
         work_start_time: '09:00',
@@ -81,7 +94,7 @@ export function CompaniesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allCompanies'] });
       showToast('Company created successfully', 'success');
-      setShowCreateModal(false);
+      setShowCreateCompanyModal(false);
       setNewCompany({ name: '', email: '', phone: '', industry: '', plan: 'free' });
     },
     onError: (error: any) => {
@@ -89,12 +102,79 @@ export function CompaniesPage() {
     },
   });
 
-  const handleCreate = async () => {
+  const createCompanyAdmin = useMutation({
+    mutationFn: async () => {
+      if (!selectedCompanyId) throw new Error('No company selected');
+
+      // Validate form
+      if (!adminForm.fullName || !adminForm.email || !adminForm.password) {
+        throw new Error('Please fill in all fields');
+      }
+
+      if (adminForm.password !== adminForm.confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+
+      if (adminForm.password.length < 8) {
+        throw new Error('Password must be at least 8 characters');
+      }
+
+      // Create auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: adminForm.email,
+        password: adminForm.password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: adminForm.fullName,
+        },
+      });
+
+      if (authError) throw authError;
+
+      // Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          company_id: selectedCompanyId,
+          email: adminForm.email,
+          full_name: adminForm.fullName,
+          role: 'company_admin',
+          status: 'active',
+        });
+
+      if (profileError) throw profileError;
+
+      return authData.user;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allCompanies'] });
+      showToast('Admin user created successfully', 'success');
+      setShowCreateAdminModal(false);
+      setAdminForm({ fullName: '', email: '', password: '', confirmPassword: '' });
+      setSelectedCompanyId(null);
+    },
+    onError: (error: any) => {
+      showToast(error.message || 'Failed to create admin user', 'error');
+    },
+  });
+
+  const handleCreateCompany = async () => {
     if (!newCompany.name || !newCompany.email) {
       showToast('Please fill in required fields', 'error');
       return;
     }
     await createCompany.mutateAsync(newCompany);
+  };
+
+  const handleCreateAdmin = async () => {
+    await createCompanyAdmin.mutateAsync();
+  };
+
+  const openCreateAdminModal = (companyId: string) => {
+    setSelectedCompanyId(companyId);
+    setAdminForm({ fullName: '', email: '', password: '', confirmPassword: '' });
+    setShowCreateAdminModal(true);
   };
 
   const statusBadgeVariant = (status: string) => {
@@ -110,7 +190,7 @@ export function CompaniesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Companies</h1>
-        <Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowCreateModal(true)}>
+        <Button leftIcon={<Plus className="w-4 h-4" />} onClick={() => setShowCreateCompanyModal(true)}>
           Add Company
         </Button>
       </div>
@@ -142,64 +222,78 @@ export function CompaniesPage() {
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeaderCell>Name</TableHeaderCell>
-                  <TableHeaderCell>Email</TableHeaderCell>
-                  <TableHeaderCell>Plan</TableHeaderCell>
-                  <TableHeaderCell>Status</TableHeaderCell>
-                  <TableHeaderCell>Created</TableHeaderCell>
-                  <TableHeaderCell>Actions</TableHeaderCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {companies.length === 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                      No companies found
-                    </TableCell>
+                    <TableHeaderCell>Name</TableHeaderCell>
+                    <TableHeaderCell>Email</TableHeaderCell>
+                    <TableHeaderCell>Plan</TableHeaderCell>
+                    <TableHeaderCell>Status</TableHeaderCell>
+                    <TableHeaderCell>Created</TableHeaderCell>
+                    <TableHeaderCell>Actions</TableHeaderCell>
                   </TableRow>
-                ) : (
-                  companies.map((company: any) => (
-                    <TableRow key={company.id}>
-                      <TableCell className="font-medium">{company.name}</TableCell>
-                      <TableCell>{company.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="neutral" size="sm">{company.plan_id}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={statusBadgeVariant(company.status)} size="sm">
-                          {company.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatDate(company.created_at)}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" leftIcon={<Edit className="w-4 h-4" />}>
-                          Edit
-                        </Button>
+                </TableHead>
+                <TableBody>
+                  {companies.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        No companies found
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    companies.map((company: any) => (
+                      <TableRow key={company.id}>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-primary-600" />
+                          {company.name}
+                        </TableCell>
+                        <TableCell>{company.email}</TableCell>
+                        <TableCell>
+                          <Badge variant="neutral" size="sm">{company.plan_id}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusBadgeVariant(company.status)} size="sm">
+                            {company.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatDate(company.created_at)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              leftIcon={<Shield className="w-4 h-4" />}
+                              onClick={() => openCreateAdminModal(company.id)}
+                              title="Create Admin User"
+                            >
+                              Add Admin
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
 
+      {/* Create Company Modal */}
       <Modal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        isOpen={showCreateCompanyModal}
+        onClose={() => setShowCreateCompanyModal(false)}
         title="Create New Company"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={createCompany.isPending}>
-              {createCompany.isPending ? 'Creating...' : 'Create'}
+            <Button variant="ghost" onClick={() => setShowCreateCompanyModal(false)}>Cancel</Button>
+            <Button onClick={handleCreateCompany} disabled={createCompany.isPending}>
+              {createCompany.isPending ? 'Creating...' : 'Create Company'}
             </Button>
           </div>
         }
@@ -241,6 +335,65 @@ export function CompaniesPage() {
               <option value="pro">Pro (50 employees)</option>
               <option value="enterprise">Enterprise (500+ employees)</option>
             </select>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Create Admin User Modal */}
+      <Modal
+        isOpen={showCreateAdminModal}
+        onClose={() => setShowCreateAdminModal(false)}
+        title="Create Company Admin"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setShowCreateAdminModal(false)}>Cancel</Button>
+            <Button onClick={handleCreateAdmin} disabled={createCompanyAdmin.isPending}>
+              {createCompanyAdmin.isPending ? 'Creating...' : 'Create Admin'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 rounded-lg p-3">
+            <p className="text-sm text-primary-700 dark:text-primary-300 font-medium">
+              Creating admin for: <span className="font-bold">{companies.find(c => c.id === selectedCompanyId)?.name}</span>
+            </p>
+          </div>
+          <Input
+            label="Full Name *"
+            value={adminForm.fullName}
+            onChange={(e) => setAdminForm({ ...adminForm, fullName: e.target.value })}
+            placeholder="John Doe"
+            leftIcon={<Mail className="w-4 h-4" />}
+          />
+          <Input
+            label="Email Address *"
+            type="email"
+            value={adminForm.email}
+            onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
+            placeholder="admin@company.com"
+            leftIcon={<Mail className="w-4 h-4" />}
+          />
+          <Input
+            label="Password *"
+            type="password"
+            value={adminForm.password}
+            onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
+            placeholder="••••••••"
+            leftIcon={<Lock className="w-4 h-4" />}
+          />
+          <Input
+            label="Confirm Password *"
+            type="password"
+            value={adminForm.confirmPassword}
+            onChange={(e) => setAdminForm({ ...adminForm, confirmPassword: e.target.value })}
+            placeholder="••••••••"
+            leftIcon={<Lock className="w-4 h-4" />}
+          />
+          <div className="bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 rounded-lg p-3">
+            <p className="text-xs text-warning-700 dark:text-warning-300">
+              ⚠️ Password must be at least 8 characters. Share these credentials securely with the admin.
+            </p>
           </div>
         </div>
       </Modal>
