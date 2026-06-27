@@ -31,25 +31,25 @@ export function AnalyticsPage() {
       title: 'Total Companies',
       value: latestAnalytics.total_companies || 0,
       icon: <Activity className="w-5 h-5" />,
-      color: 'blue',
+      color: 'primary',
     },
     {
       title: 'Active Companies',
       value: latestAnalytics.active_companies || 0,
       icon: <TrendingUp className="w-5 h-5" />,
-      color: 'green',
+      color: 'success',
     },
     {
       title: 'Total Employees',
       value: latestAnalytics.total_employees || 0,
       icon: <Users className="w-5 h-5" />,
-      color: 'purple',
+      color: 'secondary',
     },
     {
       title: 'Attendance Records',
       value: latestAnalytics.total_attendance_records || 0,
       icon: <Clock className="w-5 h-5" />,
-      color: 'orange',
+      color: 'warning',
     },
   ];
 
